@@ -1,0 +1,10 @@
+# USB automount rules for headless Raspberry Pi
+# Automatically mount USB storage devices when plugged in
+
+# Match USB storage partitions and trigger automount script
+KERNEL=="sd[a-z][0-9]", SUBSYSTEMS=="usb", ACTION=="add", RUN+="/usr/local/bin/usb-automount.sh add %k"
+KERNEL=="sd[a-z][0-9]", SUBSYSTEMS=="usb", ACTION=="remove", RUN+="/usr/local/bin/usb-automount.sh remove %k"
+
+# Also handle devices without partition numbers (e.g., /dev/sda for unpartitioned drives)
+KERNEL=="sd[a-z]", SUBSYSTEMS=="usb", ACTION=="add", RUN+="/usr/local/bin/usb-automount.sh add %k"
+KERNEL=="sd[a-z]", SUBSYSTEMS=="usb", ACTION=="remove", RUN+="/usr/local/bin/usb-automount.sh remove %k"
