@@ -1,0 +1,172 @@
+name: Package and Release
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Git ref to checkout (tag or branch)'
+        required: true
+      previous:
+        description: 'Previous ref/tag'
+        required: true
+      source_branch:
+        description: 'Source branch to merge back to (e.g., main)'
+        required: false
+        default: ''
+jobs:
+  package-deb:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [arm64]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.inputs.ref }}
+      - name: Extract tag name
+        id: extract-tag
+        run: |
+          # Extract tag name from ref (e.g., refs/tags/v0.1.0 -> v0.1.0)
+          REF="${{ github.event.inputs.ref }}"
+          TAG_NAME=$(echo "$REF" | sed -E 's|^refs/tags/||')
+          echo "tag=${TAG_NAME}" | tee -a "$GITHUB_OUTPUT"
+      - id: version
+        name: Get package version from ref
+        run: |
+          # Extract version from the ref input (e.g., refs/tags/v0.1.0 -> 0.1.0)
+          REF="${{ github.event.inputs.ref }}"
+          VERSION=$(echo "$REF" | sed -E 's|^refs/tags/v*(.*)$|\1|g')
+          echo "release=${VERSION}" | tee -a "$GITHUB_OUTPUT"
+      - id: prepare-deb
+        name: Prepare package content
+        run: |
+          # Create package structure
+          mkdir -p .debpkg/usr/local/bin
+          cp usb-automount.sh .debpkg/usr/local/bin/usb-automount.sh
+          chmod +x .debpkg/usr/local/bin/usb-automount.sh
+
+          # udev rules
+          mkdir -p .debpkg/etc/udev/rules.d
+          cp 99-usb-automount.rules .debpkg/etc/udev/rules.d/99-usb-automount.rules
+
+          # DEBIAN maintainer scripts
+          mkdir -p .debpkg/DEBIAN
+          cp debian/postinst.sh .debpkg/DEBIAN/postinst
+          cp debian/prerm.sh .debpkg/DEBIAN/prerm
+          cp debian/postrm.sh .debpkg/DEBIAN/postrm
+          chmod +x .debpkg/DEBIAN/postinst .debpkg/DEBIAN/prerm .debpkg/DEBIAN/postrm
+      - id: build-deb
+        name: Build Debian Package
+        uses: jiro4989/build-deb-action@v4
+        with:
+          package: usb-automount
+          package_root: .debpkg
+          maintainer: Francois-Xavier 'FiX' KOWALSKI <fix.kowalski@gmail.com>
+          version: refs/tags/${{ steps.version.outputs.release }}
+          arch: '${{ matrix.arch }}'
+          depends: 'udev'
+          desc: 'USB automount utility for Raspberry Pi - automatically mounts USB drives to /media/<label>'
+          homepage: 'https://github.com/asnowfix/home-pi'
+      - name: Upload USB Automount DEB as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: deb_file_${{ matrix.arch }}
+          path: ${{ steps.build-deb.outputs.file_name }}
+  release:
+    runs-on: ubuntu-latest
+    needs:
+      - package-deb
+    steps:
+      - name: Checkout
+        id: checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: version
+        name: Get package version from ref
+        run: |
+          # Extract version from the ref input (e.g., refs/tags/v0.1.0 -> 0.1.0)
+          REF="${{ github.event.inputs.ref }}"
+          VERSION=$(echo "$REF" | sed -E 's|^refs/tags/v*(.*)$|\1|g')
+          echo "release=${VERSION}" | tee -a "$GITHUB_OUTPUT"
+      - name: Generate Release Notes
+        id: release_notes
+        uses: gableroux/generate-github-release-notes@v0.1.2
+        with:
+          repository: ${{ github.repository }}
+          base_tag: "${{ github.event.inputs.previous }}"
+          head_tag: ${{ github.ref }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Download USB Automount DEB ARM64 from package-deb
+        id: deb_file_arm64
+        uses: actions/download-artifact@v4
+        with:
+          name: deb_file_arm64
+      - name: List files in workspace
+        id: list_files
+        run: ls -alR
+      - name: Release
+        id: release
+        uses: ncipollo/release-action@v1
+        with:
+          name: Release ${{ steps.version.outputs.release }}
+          artifactErrorsFailBuild: true
+          artifacts: "*.deb"
+          tag: v${{ steps.version.outputs.release }}
+          prerelease: false
+          draft: true
+          replacesArtifacts: true
+          generateReleaseNotes: true
+  merge-back:
+    runs-on: ubuntu-latest
+    needs:
+      - release
+    if: github.event.inputs.source_branch != ''
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.inputs.source_branch }}
+      - name: Import GPG key
+        uses: crazy-max/ghaction-import-gpg@v6
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE }}
+          git_config_global: true
+          git_user_signingkey: true
+          git_commit_gpgsign: true
+          git_tag_gpgsign: true
+      - name: Merge tag back to source branch
+        run: |
+          set -euo pipefail
+          
+          SOURCE_BRANCH="${{ github.event.inputs.source_branch }}"
+          TAG_REF="${{ github.event.inputs.ref }}"
+          
+          # Extract tag name from ref (e.g., refs/tags/v0.1.0 -> v0.1.0)
+          TAG_NAME=$(echo "$TAG_REF" | sed -E 's|^refs/tags/||')
+          
+          echo "Merging tag $TAG_NAME back to branch $SOURCE_BRANCH"
+          
+          # Fetch the tag
+          git fetch origin tag "$TAG_NAME"
+          
+          # Try fast-forward merge first
+          if git merge --ff-only "$TAG_NAME"; then
+            echo "✓ Fast-forward merge successful"
+            MERGE_TYPE="fast-forward"
+          else
+            # If fast-forward fails, do a regular merge
+            echo "⚠ Fast-forward not possible, creating merge commit"
+            git merge --no-ff -m "Merge tag '$TAG_NAME' back to $SOURCE_BRANCH" "$TAG_NAME"
+            MERGE_TYPE="merge-commit"
+          fi
+          
+          # Push the updated branch
+          git push origin "$SOURCE_BRANCH"
+          
+          echo "✓ Successfully merged $TAG_NAME to $SOURCE_BRANCH ($MERGE_TYPE)"
