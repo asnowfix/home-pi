@@ -67,8 +67,8 @@ jobs:
           maintainer: Francois-Xavier 'FiX' KOWALSKI <fix.kowalski@gmail.com>
           version: refs/tags/${{ steps.version.outputs.release }}
           arch: '${{ matrix.arch }}'
-          depends: 'udev'
-          desc: 'USB automount utility for Raspberry Pi - automatically mounts USB drives to /media/<label>'
+          depends: 'udev, python3 (>= 3.7), python3-pip, python3-venv'
+          desc: 'USB automount utility for Raspberry Pi with Maestral Dropbox client - automatically mounts USB drives to /media/<label> and includes Maestral for Dropbox sync'
           homepage: 'https://github.com/asnowfix/home-pi'
       - name: Upload USB Automount DEB as artifact
         uses: actions/upload-artifact@v4

@@ -2,6 +2,7 @@
 set -e
 
 SERVICE="usb-automount"
+MAESTRAL_VENV="/opt/maestral-venv"
 
 # Create log file with appropriate permissions
 touch /var/log/usb-automount.log
@@ -20,6 +21,30 @@ if [ "$1" = "configure" ]; then
     echo "USB automount installed successfully!"
     echo "USB devices will now automatically mount to /media/<label> when plugged in."
     echo "Check /var/log/usb-automount.log for mount/unmount activity."
+    
+    # Install Maestral Dropbox client
+    echo ""
+    echo "Installing Maestral Dropbox client..."
+    
+    # Create virtual environment for Maestral
+    if [ ! -d "$MAESTRAL_VENV" ]; then
+        echo "Creating Python virtual environment at $MAESTRAL_VENV..."
+        python3 -m venv "$MAESTRAL_VENV"
+    fi
+    
+    # Install/upgrade Maestral (without GUI to avoid PyQt6 build issues on Pi)
+    echo "Installing Maestral package..."
+    "$MAESTRAL_VENV/bin/python3" -m pip install --upgrade pip
+    "$MAESTRAL_VENV/bin/python3" -m pip install --upgrade maestral
+    
+    # Create symlink to make maestral command available system-wide
+    ln -sf "$MAESTRAL_VENV/bin/maestral" /usr/local/bin/maestral
+    
+    echo ""
+    echo "Maestral installed successfully!"
+    echo "To set up Dropbox sync, run: maestral auth link"
+    echo "To start syncing: maestral start"
+    echo "For more commands: maestral --help"
 fi
 
 # Exit successfully
