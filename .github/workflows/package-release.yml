@@ -14,9 +14,15 @@ on:
         description: 'Source branch to merge back to (e.g., main)'
         required: false
         default: ''
+permissions:
+  contents: write
+  packages: write
 jobs:
   package-deb:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
     strategy:
       matrix:
         arch: [arm64]
@@ -77,6 +83,9 @@ jobs:
           path: ${{ steps.build-deb.outputs.file_name }}
   release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
     needs:
       - package-deb
     steps:
@@ -122,6 +131,8 @@ jobs:
           generateReleaseNotes: true
   merge-back:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     needs:
       - release
     if: github.event.inputs.source_branch != ''

@@ -1,0 +1,52 @@
+name: create-branch-on-minor-tag
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.0'
+permissions:
+  contents: write
+jobs:
+  create-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Extract version from tag
+        id: extract
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME}"
+          if [[ "$TAG" =~ ^v([0-9]+)\.([0-9]+)\.0$ ]]; then
+            MAJOR="${BASH_REMATCH[1]}"
+            MINOR="${BASH_REMATCH[2]}"
+            BRANCH="v${MAJOR}.${MINOR}.x"
+            echo "branch=${BRANCH}" | tee -a "$GITHUB_OUTPUT"
+            echo "major=${MAJOR}" | tee -a "$GITHUB_OUTPUT"
+            echo "minor=${MINOR}" | tee -a "$GITHUB_OUTPUT"
+          else
+            echo "Tag '$TAG' does not match v<MAJOR>.<MINOR>.0 pattern" >&2
+            exit 1
+          fi
+      - name: Create and push branch
+        run: |
+          BRANCH="${{ steps.extract.outputs.branch }}"
+          # Check if branch already exists
+          if git ls-remote --heads origin "$BRANCH" | grep -q "$BRANCH"; then
+            echo "Branch $BRANCH already exists, skipping creation"
+          else
+            echo "Creating branch $BRANCH from tag ${{ github.ref_name }}"
+            git checkout -b "$BRANCH"
+            git push origin "$BRANCH"
+            echo "Branch $BRANCH created successfully"
+          fi
+      - name: Trigger Packaging Workflow
+        run: |
+          curl -X POST \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/${{ github.repository }}/actions/workflows/package-release.yml/dispatches \
+            -d '{"ref":"${{ github.ref_name }}","inputs":{"ref":"${{ github.ref }}","previous":"v${{ steps.extract.outputs.major }}.${{ steps.extract.outputs.minor }}.0","source_branch":"main"}}'
