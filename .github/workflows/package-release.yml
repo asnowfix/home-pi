@@ -2,6 +2,9 @@ name: Package and Release
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 on:
+  push:
+    tags:
+      - 'v*.*.*'
   workflow_dispatch:
     inputs:
       ref:
@@ -31,19 +34,19 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ github.event.inputs.ref }}
+          ref: ${{ github.event.inputs.ref || github.ref }}
       - name: Extract tag name
         id: extract-tag
         run: |
           # Extract tag name from ref (e.g., refs/tags/v0.1.0 -> v0.1.0)
-          REF="${{ github.event.inputs.ref }}"
+          REF="${{ github.event.inputs.ref || github.ref }}"
           TAG_NAME=$(echo "$REF" | sed -E 's|^refs/tags/||')
           echo "tag=${TAG_NAME}" | tee -a "$GITHUB_OUTPUT"
       - id: version
         name: Get package version from ref
         run: |
           # Extract version from the ref input (e.g., refs/tags/v0.1.0 -> 0.1.0)
-          REF="${{ github.event.inputs.ref }}"
+          REF="${{ github.event.inputs.ref || github.ref }}"
           VERSION=$(echo "$REF" | sed -E 's|^refs/tags/v*(.*)$|\1|g')
           echo "release=${VERSION}" | tee -a "$GITHUB_OUTPUT"
       - id: prepare-deb
@@ -98,16 +101,31 @@ jobs:
         name: Get package version from ref
         run: |
           # Extract version from the ref input (e.g., refs/tags/v0.1.0 -> 0.1.0)
-          REF="${{ github.event.inputs.ref }}"
+          REF="${{ github.event.inputs.ref || github.ref }}"
           VERSION=$(echo "$REF" | sed -E 's|^refs/tags/v*(.*)$|\1|g')
           echo "release=${VERSION}" | tee -a "$GITHUB_OUTPUT"
+      - name: Get previous tag
+        id: previous_tag
+        run: |
+          # For automatic triggers, find the previous tag
+          if [ -z "${{ github.event.inputs.previous }}" ]; then
+            CURRENT_TAG="${{ github.ref_name }}"
+            PREVIOUS=$(git tag --sort=-v:refname | grep -A1 "^${CURRENT_TAG}$" | tail -n1)
+            if [ "$PREVIOUS" = "$CURRENT_TAG" ] || [ -z "$PREVIOUS" ]; then
+              echo "No previous tag found, using current tag"
+              PREVIOUS="$CURRENT_TAG"
+            fi
+            echo "tag=${PREVIOUS}" | tee -a "$GITHUB_OUTPUT"
+          else
+            echo "tag=${{ github.event.inputs.previous }}" | tee -a "$GITHUB_OUTPUT"
+          fi
       - name: Generate Release Notes
         id: release_notes
         uses: gableroux/generate-github-release-notes@v0.1.2
         with:
           repository: ${{ github.repository }}
-          base_tag: "${{ github.event.inputs.previous }}"
-          head_tag: ${{ github.ref }}
+          base_tag: "${{ steps.previous_tag.outputs.tag }}"
+          head_tag: ${{ github.event.inputs.ref || github.ref }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
       - name: Download USB Automount DEB ARM64 from package-deb
         id: deb_file_arm64
@@ -156,7 +174,7 @@ jobs:
           set -euo pipefail
           
           SOURCE_BRANCH="${{ github.event.inputs.source_branch }}"
-          TAG_REF="${{ github.event.inputs.ref }}"
+          TAG_REF="${{ github.event.inputs.ref || github.ref }}"
           
           # Extract tag name from ref (e.g., refs/tags/v0.1.0 -> v0.1.0)
           TAG_NAME=$(echo "$TAG_REF" | sed -E 's|^refs/tags/||')
