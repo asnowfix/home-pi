@@ -1,15 +1,21 @@
 #!/bin/bash
 
-ACTION=$1
-DEVBASE=$2
-DEVICE="/dev/${DEVBASE}"
-
 # Log file for debugging
 LOG="/var/log/usb-automount.log"
 
 log_msg() {
-    echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" >> ${LOG}
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" >> "${LOG}"
 }
+
+# Validate input parameters
+if [ -z "$1" ] || [ -z "$2" ]; then
+    log_msg "ERROR: Missing required parameters (action: '$1', device: '$2')"
+    exit 1
+fi
+
+ACTION=$1
+DEVBASE=$2
+DEVICE="/dev/${DEVBASE}"
 
 # See if this drive is already mounted
 MOUNT_POINT=$(/bin/mount | /bin/grep "${DEVICE}" | /usr/bin/awk '{ print $3 }')
