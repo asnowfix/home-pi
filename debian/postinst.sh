@@ -45,6 +45,10 @@ if [ "$1" = "configure" ]; then
     fi
     
     # Create symlink to make maestral command available system-wide
+    if [ -e /usr/local/bin/maestral ] && [ ! -L /usr/local/bin/maestral ]; then
+        echo "WARNING: /usr/local/bin/maestral exists and is not a symlink" >&2
+        echo "WARNING: It will be replaced with a symlink to the packaged version" >&2
+    fi
     ln -sf "$MAESTRAL_VENV/bin/maestral" /usr/local/bin/maestral
     
     echo ""
