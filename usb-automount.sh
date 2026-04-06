@@ -24,9 +24,9 @@ do_mount() {
     LABEL=$(/sbin/blkid -s LABEL -o value "${DEVICE}")
     [ -z "${LABEL}" ] && LABEL="${DEVBASE}"
 
-    # Create mount point
-    MOUNT_POINT="/media/${LABEL}"
-    /bin/mkdir -p ${MOUNT_POINT}
+    # Create mount point with device name to avoid conflicts with duplicate labels
+    MOUNT_POINT="/media/${LABEL}-${DEVBASE}"
+    /bin/mkdir -p "${MOUNT_POINT}"
 
     # Mount the device with appropriate options
     # umask=000 gives full permissions, works for FAT/NTFS
