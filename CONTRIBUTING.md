@@ -2,13 +2,18 @@
 
 ## Release Workflow
 
-This project uses an automated package and release workflow that supports multiple trigger methods.
+This project uses an automated package and release workflow based on an **orchestrator pattern**.
+
+### Workflow Architecture
+
+The release process uses two workflows:
+
+1. **`on-tag-main.yml`** - Orchestrator that triggers on tag push
+2. **`package-release.yml`** - Worker that builds packages and creates releases
 
 ### Workflow Triggers
 
-The `Package and Release` workflow (`.github/workflows/package-release.yml`) can be triggered in three ways:
-
-#### 1. Push a Tag (Automatic)
+#### 1. Push a Tag (Automatic) - Recommended
 
 **Most common method** - Push a semver tag to trigger automatic packaging and release:
 
@@ -22,16 +27,18 @@ gh release create v0.1.0 --draft
 ```
 
 **What happens:**
-- ✅ Automatically builds `.deb` package for arm64
-- ✅ Auto-detects previous tag for release notes comparison
-- ✅ Creates a draft GitHub release with artifacts
-- ❌ Does NOT merge back to any branch (automatic mode)
+1. `on-tag-main.yml` detects the tag push
+2. Automatically finds the previous tag for release notes
+3. Triggers `package-release.yml` via GitHub API with proper inputs
+4. Builds `.deb` package for arm64
+5. Creates a draft GitHub release with artifacts
+6. Merges tag back to `main` branch
 
-**Tag format:** Must match `v*.*.*` (e.g., `v0.1.0`, `v1.2.3`, `v2.0.0-beta.1`)
+**Tag format:** Must match `v[0-9]+.[0-9]+.[0-9]+` (e.g., `v0.1.0`, `v1.2.3`)
 
 #### 2. Manual Workflow Dispatch
 
-**Advanced control** - Manually trigger the workflow via GitHub Actions UI:
+**Advanced control** - Manually trigger `package-release.yml` via GitHub Actions UI:
 
 ```
 Actions → Package and Release → Run workflow
@@ -54,9 +61,35 @@ Actions → Package and Release → Run workflow
 
 Currently, merging a PR to a release branch (e.g., `v0.1.x`) does NOT automatically trigger the workflow. This is a planned feature.
 
+### How the Orchestrator Pattern Works
+
+When you push a tag:
+
+1. **`on-tag-main.yml` triggers** (runs on `main` branch)
+   - Detects tag push via `push: tags: v[0-9]+.[0-9]+.[0-9]+`
+   - Checks out the repository with full history
+   - Finds previous tag using `git describe --tags --abbrev=0 HEAD^`
+   - Calls GitHub API to dispatch `package-release.yml`
+
+2. **API dispatch parameters:**
+   ```json
+   {
+     "ref": "main",  // Branch to run workflow from
+     "inputs": {
+       "ref": "refs/tags/v0.1.0",  // Tag to build
+       "previous": "v0.0.9",  // Previous tag for release notes
+       "source_branch": "main"  // Branch to merge back to
+     }
+   }
+   ```
+
+3. **`package-release.yml` executes** with provided inputs
+
+**Why this pattern?** GitHub Actions reads workflow files from the default branch, not from tags. The orchestrator ensures the workflow runs with the correct context.
+
 ### Workflow Jobs
 
-The workflow consists of three jobs:
+The `package-release.yml` workflow consists of three jobs:
 
 #### Job 1: `package-deb`
 - Checks out the specified tag/ref
@@ -67,7 +100,7 @@ The workflow consists of three jobs:
 
 #### Job 2: `release`
 - Downloads `.deb` artifacts from `package-deb`
-- Auto-detects previous tag (automatic mode) or uses provided input (manual mode)
+- Uses provided previous tag for release notes comparison
 - Generates release notes comparing current tag with previous tag
 - Creates a **draft** GitHub release with:
   - Version number as release name
@@ -75,32 +108,13 @@ The workflow consists of three jobs:
   - `.deb` package artifacts
 
 #### Job 3: `merge-back` (Conditional)
-- **Only runs** when manually triggered with `source_branch` input
+- **Only runs** when `source_branch` input is provided
 - Checks out the source branch
 - Imports GPG key for signed commits
 - Merges the tag back to the source branch:
   - Attempts fast-forward merge first
   - Falls back to merge commit if fast-forward not possible
 - Pushes updated branch to origin
-
-### Conditional Logic
-
-The workflow uses conditional logic to handle both automatic and manual triggers:
-
-```yaml
-# Ref resolution - uses manual input if available, otherwise uses pushed tag
-ref: ${{ github.event.inputs.ref || github.ref }}
-
-# Previous tag detection - auto-detects for automatic triggers
-if [ -z "${{ github.event.inputs.previous }}" ]; then
-  # Auto-detect previous tag
-else
-  # Use provided input
-fi
-
-# Merge-back - only runs when source_branch is provided
-if: github.event.inputs.source_branch != ''
-```
 
 ### Required Secrets
 

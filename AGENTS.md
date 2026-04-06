@@ -5,30 +5,34 @@
 Before making changes to this repository, **read the following documentation:**
 
 - **[CONTRIBUTING.md](CONTRIBUTING.md)** - Release workflow, package build process, and development guidelines
-  - Understand the automated Package and Release workflow
-  - Learn about the three trigger methods (push tag, manual dispatch, PR merge)
-  - Review conditional logic for automatic vs manual triggers
+  - Understand the orchestrator pattern architecture
+  - Learn about the two-workflow system (on-tag-main.yml + package-release.yml)
+  - Review how tag pushes trigger automated releases
   - Check required secrets and configuration
 
 ## Key Workflow Information
 
-### Release Automation
+### Release Automation Architecture
 
-This project uses `.github/workflows/package-release.yml` which:
+This project uses an **orchestrator pattern** with two workflows:
 
-1. **Triggers automatically** when you push a tag matching `v*.*.*`
-2. **Can be manually triggered** via workflow_dispatch with custom inputs
-3. **Builds Debian packages** for arm64 architecture
-4. **Creates draft releases** with auto-generated release notes
-5. **Optionally merges back** to source branch (manual mode only)
+1. **`on-tag-main.yml`** (Orchestrator)
+   - Triggers on tag push matching `v[0-9]+.[0-9]+.[0-9]+`
+   - Auto-detects previous tag
+   - Dispatches `package-release.yml` via GitHub API
 
-### Important: Conditional Logic
+2. **`package-release.yml`** (Worker)
+   - Triggered only via `workflow_dispatch`
+   - Builds Debian packages for arm64
+   - Creates draft releases with auto-generated release notes
+   - Optionally merges back to source branch
 
-The workflow uses `${{ github.event.inputs.ref || github.ref }}` pattern throughout to support both:
-- **Automatic triggers**: Uses `github.ref` (the pushed tag)
-- **Manual triggers**: Uses `github.event.inputs.ref` (user-provided input)
+### Important: Why the Orchestrator Pattern?
 
-When modifying the workflow, maintain this pattern to ensure both trigger methods work correctly.
+GitHub Actions reads workflow files from the **default branch** (main), not from tags. The orchestrator pattern ensures:
+- Workflow files on `main` are always used
+- Tags can be created from any commit
+- Proper context is maintained for builds
 
 ### Tag Format
 
