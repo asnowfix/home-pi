@@ -28,6 +28,11 @@ echo "Installing automount script..."
 cp "${SCRIPT_DIR}/usb-automount.sh" /usr/local/bin/usb-automount.sh
 chmod +x /usr/local/bin/usb-automount.sh
 
+# Copy the diagnostic script
+echo "Installing diagnostic script..."
+cp "${SCRIPT_DIR}/diagnose-disks.sh" /usr/local/bin/diagnose-disks.sh
+chmod +x /usr/local/bin/diagnose-disks.sh
+
 # Copy the udev rule
 echo "Installing udev rule..."
 cp "${SCRIPT_DIR}/99-usb-automount.rules" /etc/udev/rules.d/99-usb-automount.rules
@@ -48,7 +53,9 @@ udevadm trigger
 echo ""
 echo "Installation complete!"
 echo ""
-echo "USB devices will now automatically mount to /media/<label> when plugged in."
+echo "USB devices will now automatically mount to /media/<label>-<device> when plugged in."
 echo "Check /var/log/usb-automount.log for mount/unmount activity."
 echo ""
 echo "To test: plug in a USB drive and check 'ls /media/'"
+echo ""
+echo "For troubleshooting, run: sudo diagnose-disks.sh"

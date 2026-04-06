@@ -60,6 +60,10 @@ jobs:
           mkdir -p .debpkg/usr/local/bin
           cp usb-automount.sh .debpkg/usr/local/bin/usb-automount.sh
           chmod +x .debpkg/usr/local/bin/usb-automount.sh
+          
+          # Diagnostic script for troubleshooting
+          cp diagnose-disks.sh .debpkg/usr/local/bin/diagnose-disks.sh
+          chmod +x .debpkg/usr/local/bin/diagnose-disks.sh
 
           # udev rules
           mkdir -p .debpkg/etc/udev/rules.d

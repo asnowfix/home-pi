@@ -24,6 +24,7 @@ This directory contains the maintainer scripts used during Debian package instal
 
 The Debian package installs:
 - `/usr/local/bin/usb-automount.sh` - Main automount script
+- `/usr/local/bin/diagnose-disks.sh` - Diagnostic script for troubleshooting
 - `/etc/udev/rules.d/99-usb-automount.rules` - Udev rule for USB device detection
 - `/opt/maestral-venv/` - Python virtual environment with Maestral (installed during postinst)
 - `/usr/local/bin/maestral` - Symlink to Maestral command
@@ -31,6 +32,21 @@ The Debian package installs:
 ## Maestral Dropbox Client
 
 The package automatically installs [Maestral](https://maestral.app), an open-source Dropbox client for Linux, using pip in a dedicated virtual environment.
+
+### Troubleshooting
+
+If USB drives are not mounting automatically, use the included diagnostic script:
+
+```bash
+sudo diagnose-disks.sh
+```
+
+This will analyze your system and show:
+- All block devices and their properties
+- USB device detection status
+- udev attributes for disk devices
+- Removable drive status (must be `removable=1` for automount)
+- Current mount points
 
 ### Using Maestral
 
