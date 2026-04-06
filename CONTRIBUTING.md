@@ -116,19 +116,23 @@ The `package-release.yml` workflow consists of three jobs:
   - Falls back to merge commit if fast-forward not possible
 - Pushes updated branch to origin
 
+### Required Configuration
+
+**Repository Workflow Permissions:**
+
+The orchestrator pattern requires the `GITHUB_TOKEN` to have write permissions to trigger workflows:
+
+1. Go to: https://github.com/asnowfix/home-pi/settings/actions
+2. Under "Workflow permissions", select **"Read and write permissions"**
+3. Save changes
+
+**Why this is needed:** By default, new repositories have read-only `GITHUB_TOKEN` permissions. The orchestrator needs write permissions to dispatch `package-release.yml` via API.
+
 ### Required Secrets
 
-The workflow requires the following secrets to be configured:
-
-- `PAT_WORKFLOW_DISPATCH` - **Required** - Personal Access Token with `workflow` scope for triggering workflows
-  - Create at: https://github.com/settings/tokens/new
-  - Required scopes: `workflow`, `repo`
-  - Add as repository secret at: Settings → Secrets and variables → Actions → New repository secret
-- `GITHUB_TOKEN` - Automatically provided by GitHub Actions (used for release creation)
+- `GITHUB_TOKEN` - Automatically provided by GitHub Actions (used for workflow dispatch and release creation)
 - `GPG_PRIVATE_KEY` - For signing commits during merge-back (optional, only needed for manual dispatch with merge-back)
 - `GPG_PASSPHRASE` - Passphrase for GPG key (optional, only needed for manual dispatch with merge-back)
-
-**Why PAT is needed:** The default `GITHUB_TOKEN` cannot trigger other workflows for security reasons. The orchestrator pattern requires a PAT to dispatch `package-release.yml`.
 
 ### Release Process
 

@@ -54,9 +54,14 @@ The project builds a Debian package with:
 
 All files must exist and be properly formatted for the package build to succeed.
 
+## Required Configuration
+
+**Repository Settings:**
+- Workflow permissions must be set to **"Read and write permissions"**
+- Configure at: Repository Settings → Actions → Workflow permissions
+
 ## Required Secrets
 
-- `PAT_WORKFLOW_DISPATCH` - **Required** - Personal Access Token with `workflow` scope for triggering workflows
 - `GITHUB_TOKEN` - Auto-provided by GitHub Actions
 - `GPG_PRIVATE_KEY` - For signed commits (merge-back only)
 - `GPG_PASSPHRASE` - For GPG key (merge-back only)
