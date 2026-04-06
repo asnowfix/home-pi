@@ -34,8 +34,15 @@ if [ "$1" = "configure" ]; then
     
     # Install/upgrade Maestral (without GUI to avoid PyQt6 build issues on Pi)
     echo "Installing Maestral package..."
-    "$MAESTRAL_VENV/bin/python3" -m pip install --upgrade pip
-    "$MAESTRAL_VENV/bin/python3" -m pip install --upgrade maestral
+    if ! "$MAESTRAL_VENV/bin/python3" -m pip install --upgrade pip; then
+        echo "ERROR: Failed to upgrade pip" >&2
+        exit 1
+    fi
+    
+    if ! "$MAESTRAL_VENV/bin/python3" -m pip install --upgrade maestral; then
+        echo "ERROR: Failed to install Maestral" >&2
+        exit 1
+    fi
     
     # Create symlink to make maestral command available system-wide
     ln -sf "$MAESTRAL_VENV/bin/maestral" /usr/local/bin/maestral
