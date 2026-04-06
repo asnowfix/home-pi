@@ -3,11 +3,9 @@ set -e
 
 MAESTRAL_VENV="/opt/maestral-venv"
 
-# Check if the script is being run during package purge (complete removal)
-if [ "$1" = "purge" ]; then
-    echo "Purging USB automount configuration..."
-    
-    # Reload udev rules to remove our custom rule
+# Common cleanup function
+cleanup_maestral() {
+    # Reload udev rules
     udevadm control --reload-rules
     udevadm trigger
     
@@ -21,6 +19,13 @@ if [ "$1" = "purge" ]; then
     if [ -L /usr/local/bin/maestral ]; then
         rm -f /usr/local/bin/maestral
     fi
+}
+
+# Check if the script is being run during package purge (complete removal)
+if [ "$1" = "purge" ]; then
+    echo "Purging USB automount configuration..."
+    
+    cleanup_maestral
     
     # Optionally remove Maestral config and cache (commented out for safety)
     # User data is typically in ~/.config/maestral and ~/.cache/maestral
@@ -36,20 +41,7 @@ fi
 if [ "$1" = "remove" ]; then
     echo "Removing USB automount..."
     
-    # Reload udev rules
-    udevadm control --reload-rules
-    udevadm trigger
-    
-    # Remove Maestral virtual environment
-    if [ -d "$MAESTRAL_VENV" ]; then
-        echo "Removing Maestral installation..."
-        rm -rf "$MAESTRAL_VENV"
-    fi
-    
-    # Remove Maestral symlink
-    if [ -L /usr/local/bin/maestral ]; then
-        rm -f /usr/local/bin/maestral
-    fi
+    cleanup_maestral
     
     echo "USB automount and Maestral have been removed."
     echo "Note: Maestral configuration and synced files are preserved."
