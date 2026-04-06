@@ -131,8 +131,45 @@ The orchestrator pattern requires the `GITHUB_TOKEN` to have write permissions t
 ### Required Secrets
 
 - `GITHUB_TOKEN` - Automatically provided by GitHub Actions (used for workflow dispatch and release creation)
-- `GPG_PRIVATE_KEY` - For signing commits during merge-back (optional, only needed for manual dispatch with merge-back)
-- `GPG_PASSPHRASE` - Passphrase for GPG key (optional, only needed for manual dispatch with merge-back)
+- `GPG_PRIVATE_KEY` - For signing commits during merge-back (optional, only needed if using merge-back feature)
+- `GPG_PASSPHRASE` - Passphrase for GPG key (optional, only needed if using merge-back feature)
+
+#### Setting Up GPG Secrets (Optional)
+
+If you want to use the merge-back feature with signed commits, configure GPG secrets:
+
+**Using GitHub CLI:**
+
+```bash
+# List your GPG keys to find the key ID
+gpg --list-secret-keys --keyid-format=long
+# Look for the line starting with 'sec' - the key ID is after the key type
+# Example: sec   rsa4096/ABCD1234EFGH5678 2024-01-01
+#          The key ID is: ABCD1234EFGH5678
+
+# Export your GPG private key (replace YOUR_KEY_ID with the actual key ID from above)
+gpg --armor --export-secret-keys YOUR_KEY_ID > private-key.asc
+
+# Set GPG_PRIVATE_KEY secret
+gh secret set GPG_PRIVATE_KEY --repo asnowfix/home-pi < private-key.asc
+
+# Set GPG_PASSPHRASE secret
+gh secret set GPG_PASSPHRASE --repo asnowfix/home-pi
+# (You'll be prompted to enter the passphrase)
+
+# Clean up the exported key file
+rm private-key.asc
+
+# Verify secrets were added
+gh secret list --repo asnowfix/home-pi
+```
+
+**Using GitHub Web UI:**
+
+1. Go to: https://github.com/asnowfix/home-pi/settings/secrets/actions
+2. Click "New repository secret"
+3. Add `GPG_PRIVATE_KEY` with your exported private key
+4. Add `GPG_PASSPHRASE` with your key passphrase
 
 ### Release Process
 
