@@ -1,10 +1,12 @@
 # USB automount rules for headless Raspberry Pi
 # Automatically mount USB storage devices when plugged in
+# Only matches removable drives (USB sticks, removable external drives)
+# Excludes permanent USB-SATA adapters and system drives
 
 # Match USB storage partitions and trigger automount script
-KERNEL=="sd[a-z][0-9]", SUBSYSTEMS=="usb", ACTION=="add", RUN+="/usr/local/bin/usb-automount.sh add %k"
-KERNEL=="sd[a-z][0-9]", SUBSYSTEMS=="usb", ACTION=="remove", RUN+="/usr/local/bin/usb-automount.sh remove %k"
+KERNEL=="sd[a-z][0-9]", SUBSYSTEMS=="usb", ATTR{removable}=="1", ACTION=="add", RUN+="/usr/local/bin/usb-automount.sh add %k"
+KERNEL=="sd[a-z][0-9]", SUBSYSTEMS=="usb", ATTR{removable}=="1", ACTION=="remove", RUN+="/usr/local/bin/usb-automount.sh remove %k"
 
 # Also handle devices without partition numbers (e.g., /dev/sda for unpartitioned drives)
-KERNEL=="sd[a-z]", SUBSYSTEMS=="usb", ACTION=="add", RUN+="/usr/local/bin/usb-automount.sh add %k"
-KERNEL=="sd[a-z]", SUBSYSTEMS=="usb", ACTION=="remove", RUN+="/usr/local/bin/usb-automount.sh remove %k"
+KERNEL=="sd[a-z]", SUBSYSTEMS=="usb", ATTR{removable}=="1", ACTION=="add", RUN+="/usr/local/bin/usb-automount.sh add %k"
+KERNEL=="sd[a-z]", SUBSYSTEMS=="usb", ATTR{removable}=="1", ACTION=="remove", RUN+="/usr/local/bin/usb-automount.sh remove %k"
