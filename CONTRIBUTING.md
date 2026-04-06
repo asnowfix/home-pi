@@ -44,14 +44,20 @@ gh release create v0.1.0 --draft
 Actions → Package and Release → Run workflow
 ```
 
+**Note:** The `package-release.yml` workflow is triggered via `workflow_dispatch`, which means:
+- It can be triggered manually through the GitHub UI
+- It is automatically triggered via GitHub API by orchestrator workflows (`on-tag-main.yml`, `create-branch-on-minor-tag.yml`)
+- It does NOT trigger automatically on push events
+
 **Required inputs:**
-- `ref`: Git ref to checkout (e.g., `refs/tags/v0.1.0` or branch name)
+- `ref`: Git ref to checkout (e.g., `refs/tags/v0.1.0` - must be a valid version tag)
 - `previous`: Previous tag for release notes comparison (e.g., `v0.0.9`)
 
 **Optional inputs:**
 - `source_branch`: Branch to merge the tag back to (e.g., `main`)
 
 **What happens:**
+- ✅ Validates that `ref` is a properly formatted version tag
 - ✅ Builds `.deb` package for arm64
 - ✅ Uses your specified previous tag for release notes
 - ✅ Creates a draft GitHub release with artifacts
