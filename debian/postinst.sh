@@ -1,7 +1,6 @@
 #!/bin/bash
 set -e
 
-SERVICE="usb-automount"
 MAESTRAL_VENV="/opt/maestral-venv"
 
 # Create log file with appropriate permissions
