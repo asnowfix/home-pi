@@ -49,7 +49,11 @@ do_mount() {
         log_msg "Mounted ${DEVICE} (${FSTYPE}) at ${MOUNT_POINT}"
     else
         log_msg "Failed to mount ${DEVICE}"
-        /bin/rmdir "${MOUNT_POINT}" 2>/dev/null
+        if /bin/rmdir "${MOUNT_POINT}" 2>/dev/null; then
+            log_msg "Removed empty mount point ${MOUNT_POINT}"
+        else
+            log_msg "Could not remove mount point ${MOUNT_POINT} (may not be empty or already removed)"
+        fi
     fi
 }
 
@@ -64,7 +68,11 @@ do_unmount() {
     if [ $? -eq 0 ]; then
         log_msg "Unmounted ${DEVICE} from ${MOUNT_POINT}"
         # Remove mount point if empty
-        /bin/rmdir "${MOUNT_POINT}" 2>/dev/null
+        if /bin/rmdir "${MOUNT_POINT}" 2>/dev/null; then
+            log_msg "Removed mount point ${MOUNT_POINT}"
+        else
+            log_msg "Could not remove mount point ${MOUNT_POINT} (may not be empty)"
+        fi
     else
         log_msg "Failed to unmount ${DEVICE}"
     fi
