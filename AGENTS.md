@@ -56,9 +56,29 @@ All files must exist and be properly formatted for the package build to succeed.
 
 ## Required Configuration
 
-**Repository Settings:**
-- Workflow permissions must be set to **"Read and write permissions"**
-- Configure at: Repository Settings → Actions → Workflow permissions
+**Repository Workflow Permissions:**
+
+The orchestrator pattern requires write permissions for `GITHUB_TOKEN` to trigger workflows via API.
+
+**Quick Setup (gh CLI):**
+```bash
+# Set permissions
+gh api --method PUT \
+  -H "Accept: application/vnd.github+json" \
+  -H "X-GitHub-Api-Version: 2022-11-28" \
+  /repos/asnowfix/home-pi/actions/permissions \
+  -F enabled=true \
+  -f default_workflow_permissions='write' \
+  -F can_approve_pull_request_reviews=false
+
+# Verify (should return: {"enabled": true, "allowed_actions": "all", ...})
+gh api -H "Accept: application/vnd.github+json" \
+  /repos/asnowfix/home-pi/actions/permissions
+```
+
+**Alternative:** Repository Settings → Actions → Workflow permissions → "Read and write permissions"
+
+**Critical:** Without this, orchestrator workflows fail with 403 errors when dispatching package builds.
 
 ## Required Secrets
 

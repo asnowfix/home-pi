@@ -126,13 +126,44 @@ The `package-release.yml` workflow consists of three jobs:
 
 **Repository Workflow Permissions:**
 
-The orchestrator pattern requires the `GITHUB_TOKEN` to have write permissions to trigger workflows:
+The orchestrator pattern requires the `GITHUB_TOKEN` to have write permissions to trigger workflows.
+
+**Using GitHub CLI (Recommended):**
+
+```bash
+# Set workflow permissions to read and write
+gh api \
+  --method PUT \
+  -H "Accept: application/vnd.github+json" \
+  -H "X-GitHub-Api-Version: 2022-11-28" \
+  /repos/asnowfix/home-pi/actions/permissions \
+  -F enabled=true \
+  -f default_workflow_permissions='write' \
+  -F can_approve_pull_request_reviews=false
+
+# Verify the configuration
+gh api \
+  -H "Accept: application/vnd.github+json" \
+  -H "X-GitHub-Api-Version: 2022-11-28" \
+  /repos/asnowfix/home-pi/actions/permissions
+```
+
+**Expected verification output:**
+```json
+{
+  "enabled": true,
+  "allowed_actions": "all",
+  "sha_pinning_required": false
+}
+```
+
+**Using GitHub Web UI:**
 
 1. Go to: https://github.com/asnowfix/home-pi/settings/actions
 2. Under "Workflow permissions", select **"Read and write permissions"**
 3. Save changes
 
-**Why this is needed:** By default, new repositories have read-only `GITHUB_TOKEN` permissions. The orchestrator needs write permissions to dispatch `package-release.yml` via API.
+**Why this is needed:** By default, new repositories have read-only `GITHUB_TOKEN` permissions. The orchestrator needs write permissions to dispatch `package-release.yml` via API. Without this, you'll get a 403 error when the orchestrator tries to trigger the package workflow.
 
 ### Required Secrets
 
