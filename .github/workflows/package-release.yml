@@ -44,7 +44,7 @@ jobs:
         run: |
           # Extract version from the ref input (e.g., refs/tags/v0.1.0 -> 0.1.0)
           REF="${{ github.event.inputs.ref }}"
-          VERSION=$(echo "$REF" | sed -E 's|^refs/tags/v*(.*)$|\1|g')
+          VERSION=$(echo "$REF" | sed -E 's|^refs/tags/v(.*)$|\1|')
           echo "release=${VERSION}" | tee -a "$GITHUB_OUTPUT"
       - id: prepare-deb
         name: Prepare package content
@@ -99,7 +99,7 @@ jobs:
         run: |
           # Extract version from the ref input (e.g., refs/tags/v0.1.0 -> 0.1.0)
           REF="${{ github.event.inputs.ref }}"
-          VERSION=$(echo "$REF" | sed -E 's|^refs/tags/v*(.*)$|\1|g')
+          VERSION=$(echo "$REF" | sed -E 's|^refs/tags/v(.*)$|\1|')
           echo "release=${VERSION}" | tee -a "$GITHUB_OUTPUT"
       - name: Generate Release Notes
         id: release_notes
