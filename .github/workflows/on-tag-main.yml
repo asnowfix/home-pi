@@ -19,8 +19,12 @@ jobs:
           echo "previous=$(git describe --tags --abbrev=0 HEAD^)" | tee -a "$GITHUB_OUTPUT"
       - name: Trigger Packaging Workflow
         run: |
-          curl -X POST \
+          if ! curl -f -X POST \
             -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             -H "Accept: application/vnd.github.v3+json" \
             https://api.github.com/repos/${{ github.repository }}/actions/workflows/package-release.yml/dispatches \
-            -d '{"ref":"main","inputs":{"ref":"${{ github.ref }}","previous":"${{ steps.previous-tag.outputs.previous }}","source_branch":"main"}}'
+            -d '{"ref":"main","inputs":{"ref":"${{ github.ref }}","previous":"${{ steps.previous-tag.outputs.previous }}","source_branch":"main"}}'; then
+            echo "ERROR: Failed to trigger package-release workflow" >&2
+            exit 1
+          fi
+          echo "Successfully triggered package-release workflow"
