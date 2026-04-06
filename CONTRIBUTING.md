@@ -120,9 +120,15 @@ The `package-release.yml` workflow consists of three jobs:
 
 The workflow requires the following secrets to be configured:
 
-- `GITHUB_TOKEN` - Automatically provided by GitHub Actions
+- `PAT_WORKFLOW_DISPATCH` - **Required** - Personal Access Token with `workflow` scope for triggering workflows
+  - Create at: https://github.com/settings/tokens/new
+  - Required scopes: `workflow`, `repo`
+  - Add as repository secret at: Settings → Secrets and variables → Actions → New repository secret
+- `GITHUB_TOKEN` - Automatically provided by GitHub Actions (used for release creation)
 - `GPG_PRIVATE_KEY` - For signing commits during merge-back (optional, only needed for manual dispatch with merge-back)
 - `GPG_PASSPHRASE` - Passphrase for GPG key (optional, only needed for manual dispatch with merge-back)
+
+**Why PAT is needed:** The default `GITHUB_TOKEN` cannot trigger other workflows for security reasons. The orchestrator pattern requires a PAT to dispatch `package-release.yml`.
 
 ### Release Process
 

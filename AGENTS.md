@@ -56,6 +56,7 @@ All files must exist and be properly formatted for the package build to succeed.
 
 ## Required Secrets
 
+- `PAT_WORKFLOW_DISPATCH` - **Required** - Personal Access Token with `workflow` scope for triggering workflows
 - `GITHUB_TOKEN` - Auto-provided by GitHub Actions
 - `GPG_PRIVATE_KEY` - For signed commits (merge-back only)
 - `GPG_PASSPHRASE` - For GPG key (merge-back only)
