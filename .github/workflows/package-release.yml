@@ -107,7 +107,7 @@ jobs:
         with:
           repository: ${{ github.repository }}
           base_tag: "${{ github.event.inputs.previous }}"
-          head_tag: ${{ github.ref }}
+          head_tag: ${{ github.event.inputs.ref }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
       - name: Download USB Automount DEB ARM64 from package-deb
         id: deb_file_arm64
