@@ -23,7 +23,7 @@ cleanup_maestral() {
 
 # Check if the script is being run during package purge (complete removal)
 if [ "$1" = "purge" ]; then
-    echo "Purging USB automount configuration..."
+    echo "Purging homepi-server configuration..."
     
     cleanup_maestral
     
@@ -34,16 +34,16 @@ if [ "$1" = "purge" ]; then
     # Optionally remove log file (commented out for safety)
     # rm -f /var/log/usb-automount.log
     
-    echo "USB automount and Maestral have been purged."
+    echo "homepi-server has been purged."
 fi
 
 # On remove (not purge), reload udev rules
 if [ "$1" = "remove" ]; then
-    echo "Removing USB automount..."
+    echo "Removing homepi-server..."
     
     cleanup_maestral
     
-    echo "USB automount and Maestral have been removed."
+    echo "homepi-server has been removed."
     echo "Note: Maestral configuration and synced files are preserved."
 fi
 

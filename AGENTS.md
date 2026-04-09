@@ -9,6 +9,11 @@ Before making changes to this repository, **read the following documentation:**
   - Learn about the two-workflow system (on-tag-main.yml + package-release.yml)
   - Review how tag pushes trigger automated releases
   - Check required secrets and configuration
+- **[PLAN.md](PLAN.md)** - Roadmap for expanding the meta-package with new components
+
+## Project Overview
+
+`homepi-server` is a **meta-package** for Raspberry Pi. It ships scripts, configuration files, and dependencies to turn a Pi into a home server. Components are added incrementally — see PLAN.md for the roadmap.
 
 ## Key Workflow Information
 
@@ -47,9 +52,10 @@ All version tags must match the pattern `v*.*.*` (e.g., `v0.1.0`, `v1.2.3`).
 
 ## Package Structure
 
-The project builds a Debian package with:
-- Main script: `usb-automount.sh`
-- udev rules: `99-usb-automount.rules`
+The `homepi-server` meta-package currently includes:
+- USB automount: `usb-automount.sh`, `99-usb-automount.rules`
+- Diagnostics: `diagnose-disks.sh`
+- Maestral Dropbox client (installed via postinst)
 - Maintainer scripts: `debian/postinst.sh`, `debian/prerm.sh`, `debian/postrm.sh`
 
 All files must exist and be properly formatted for the package build to succeed.

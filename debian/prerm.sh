@@ -5,7 +5,7 @@ MAESTRAL_VENV="/opt/maestral-venv"
 
 # Check if the script is being run during package removal
 if [ "$1" = "remove" ] || [ "$1" = "upgrade" ]; then
-    echo "Preparing to remove USB automount..."
+    echo "Preparing to remove homepi-server..."
     
     # Stop Maestral if it's running
     if [ -f "$MAESTRAL_VENV/bin/maestral" ]; then

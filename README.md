@@ -1,18 +1,20 @@
 # home-pi
 
-Utilities and scripts for Rapsberry PI @ Home
+A home server meta-package for Raspberry Pi. Ships scripts, configuration files, and dependencies to turn a Raspberry Pi into a capable home server.
 
-## USB Automount
+## What's Included
 
-USB automount script for headless Raspberry Pi
+### USB Automount
 
-### Installation
+Headless USB automount — automatically mounts USB drives to `/media/<label>-<device>` via udev rules.
+
+#### Manual Installation (without .deb)
 
 ```bash
 sudo ./install-usb-automount.sh
 ```
 
-### Troubleshooting
+#### Troubleshooting
 
 If USB drives are not mounting automatically, use the diagnostic script to analyze your system:
 
@@ -29,9 +31,9 @@ This will show:
 
 Use this output to verify that your USB drives have the `removable=1` attribute required by the udev rules.
 
-## Maestral Dropbox Client
+### Maestral Dropbox Client
 
-The package includes [Maestral](https://maestral.app), an open-source Dropbox client for Linux.
+[Maestral](https://maestral.app), an open-source Dropbox client for Linux, installed in an isolated Python venv.
 
 After installation, set up Dropbox sync:
 
@@ -45,6 +47,12 @@ For more commands: `maestral --help`
 
 ## Debian Package
 
-The Debian package includes both USB automount and Maestral Dropbox client.
+Install the meta-package to get everything configured at once:
+
+```bash
+sudo dpkg -i homepi-server_*.deb
+```
 
 See [debian/README.md](debian/README.md) for detailed package information.
+
+See [PLAN.md](PLAN.md) for the roadmap of upcoming components (Prometheus, MQTT gateway, etc.).

@@ -244,7 +244,7 @@ gh secret list --repo asnowfix/home-pi
 
 ### Package Details
 
-**Package name:** `usb-automount`
+**Package name:** `homepi-server`
 
 **Architecture:** `arm64` (Raspberry Pi)
 
@@ -255,7 +255,8 @@ gh secret list --repo asnowfix/home-pi
 - `python3-venv`
 
 **Package contents:**
-- `/usr/local/bin/usb-automount.sh` - Main automount script
+- `/usr/local/bin/usb-automount.sh` - USB automount script
+- `/usr/local/bin/diagnose-disks.sh` - Diagnostic script
 - `/etc/udev/rules.d/99-usb-automount.rules` - udev rules
 - Maintainer scripts: `postinst`, `prerm`, `postrm`
 
@@ -271,7 +272,7 @@ gh secret list --repo asnowfix/home-pi
 - Verify no merge conflicts exist
 
 **Package build fails:**
-- Verify all required files exist: `usb-automount.sh`, `99-usb-automount.rules`, `debian/*.sh`
+- Verify all required files exist: `usb-automount.sh`, `diagnose-disks.sh`, `99-usb-automount.rules`, `debian/*.sh`
 - Check file permissions on maintainer scripts
 
 ## Development Workflow

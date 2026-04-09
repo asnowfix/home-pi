@@ -22,8 +22,8 @@ This directory contains the maintainer scripts used during Debian package instal
 
 ## Package Structure
 
-The Debian package installs:
-- `/usr/local/bin/usb-automount.sh` - Main automount script
+The `homepi-server` Debian package installs:
+- `/usr/local/bin/usb-automount.sh` - USB automount script
 - `/usr/local/bin/diagnose-disks.sh` - Diagnostic script for troubleshooting
 - `/etc/udev/rules.d/99-usb-automount.rules` - Udev rule for USB device detection
 - `/opt/maestral-venv/` - Python virtual environment with Maestral (installed during postinst)
@@ -96,15 +96,15 @@ The workflow will:
 After downloading the `.deb` file:
 
 ```bash
-sudo dpkg -i usb-automount_*.deb
+sudo dpkg -i homepi-server_*.deb
 ```
 
 ## Manual Removal
 
 ```bash
 # Remove package but keep configuration
-sudo apt-get remove usb-automount
+sudo apt-get remove homepi-server
 
 # Remove package and all configuration
-sudo apt-get purge usb-automount
+sudo apt-get purge homepi-server
 ```

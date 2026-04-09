@@ -17,7 +17,7 @@ if [ "$1" = "configure" ]; then
     udevadm control --reload-rules
     udevadm trigger
     
-    echo "USB automount installed successfully!"
+    echo "homepi-server: USB automount configured."
     echo "USB devices will now automatically mount to /media/<label> when plugged in."
     echo "Check /var/log/usb-automount.log for mount/unmount activity."
     
