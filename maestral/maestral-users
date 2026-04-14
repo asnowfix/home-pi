@@ -1,0 +1,8 @@
+# Maestral auto-start whitelist
+# List one username per line. Maestral will be started as a systemd
+# service for each user listed here, provided their Maestral config
+# exists (~/.config/maestral/maestral.ini).
+#
+# Example:
+# pi
+# alice

@@ -69,6 +69,14 @@ jobs:
           mkdir -p .debpkg/etc/udev/rules.d
           cp 99-usb-automount.rules .debpkg/etc/udev/rules.d/99-usb-automount.rules
 
+          # Maestral systemd service template
+          mkdir -p .debpkg/etc/systemd/system
+          cp maestral/maestral@.service .debpkg/etc/systemd/system/maestral@.service
+
+          # Maestral user whitelist (default empty)
+          mkdir -p .debpkg/etc/homepi
+          cp maestral/maestral-users .debpkg/etc/homepi/maestral-users
+
           # DEBIAN maintainer scripts
           mkdir -p .debpkg/DEBIAN
           cp debian/postinst.sh .debpkg/DEBIAN/postinst

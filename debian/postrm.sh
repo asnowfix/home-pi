@@ -19,6 +19,10 @@ cleanup_maestral() {
     if [ -L /usr/local/bin/maestral ]; then
         rm -f /usr/local/bin/maestral
     fi
+
+    # Remove systemd service file
+    rm -f /etc/systemd/system/maestral@.service
+    systemctl daemon-reload 2>/dev/null || true
 }
 
 # Check if the script is being run during package purge (complete removal)
