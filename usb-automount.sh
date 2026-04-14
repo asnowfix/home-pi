@@ -17,6 +17,12 @@ ACTION=$1
 DEVBASE=$2
 DEVICE="/dev/${DEVBASE}"
 
+# Skip whole-disk devices that have partitions (mount the partitions instead)
+if [[ "${DEVBASE}" =~ ^sd[a-z]$ ]] && ls /dev/${DEVBASE}[0-9]* &>/dev/null; then
+    log_msg "Skipping ${DEVICE} — has partitions, will mount those instead"
+    exit 0
+fi
+
 # See if this drive is already mounted
 MOUNT_POINT=$(mount | grep "${DEVICE}" | awk '{ print $3 }')
 
