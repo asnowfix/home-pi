@@ -96,7 +96,7 @@ jobs:
           maintainer: Francois-Xavier 'FiX' KOWALSKI <fix.kowalski@gmail.com>
           version: refs/tags/${{ steps.version.outputs.release }}
           arch: '${{ matrix.arch }}'
-          depends: 'udev, python3 (>= 3.7), python3-pip, python3-venv, curl, inotify-tools'
+          depends: 'udev, python3 (>= 3.7), python3-pip, python3-venv, inotify-tools, curl'
           desc: 'Home server meta-package for Raspberry Pi - ships scripts, configuration, and dependencies (USB automount, Maestral Dropbox sync, and more)'
           homepage: 'https://github.com/asnowfix/home-pi'
       - name: Upload DEB as artifact

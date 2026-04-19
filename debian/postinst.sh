@@ -58,19 +58,12 @@ if [ "$1" = "configure" ]; then
     echo "To set up Dropbox sync, run: maestral auth link"
     echo "To start syncing: maestral start"
 
-    # Install inotify-tools
-    echo ""
-    echo "Installing inotify-tools..."
-    apt-get install -y inotify-tools
-
-    # Install rclone: try apt if version >= 1.65, otherwise use official installer
-    echo "Installing rclone..."
-    RCLONE_APT_VERSION=$(apt-cache policy rclone 2>/dev/null | grep 'Candidate:' | awk '{print $2}' | cut -d'-' -f1 | cut -d':' -f2)
-    if [ -n "$RCLONE_APT_VERSION" ] && dpkg --compare-versions "$RCLONE_APT_VERSION" ge "$RCLONE_MIN_VERSION"; then
-        echo "apt rclone $RCLONE_APT_VERSION >= $RCLONE_MIN_VERSION, installing from apt..."
-        apt-get install -y rclone
+    # Install rclone via official installer (apt rclone on Bookworm is 1.60 — too old for bisync)
+    # inotify-tools and curl are declared as package dependencies and installed by apt beforehand.
+    if command -v rclone >/dev/null && dpkg --compare-versions "$(rclone version --check 2>/dev/null | awk '/rclone/{print $2}' | tr -d v)" ge "$RCLONE_MIN_VERSION" 2>/dev/null; then
+        echo "rclone $(rclone --version | head -1) already installed — skipping."
     else
-        echo "apt rclone version too old or unavailable, installing from official installer..."
+        echo "Installing rclone from official installer..."
         curl https://rclone.org/install.sh | bash
     fi
 
