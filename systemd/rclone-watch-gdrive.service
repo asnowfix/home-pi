@@ -1,0 +1,14 @@
+[Unit]
+Description=rclone inotify sync – GoogleDrive (local → GDrive)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=@@RCLONE_USER@@
+ExecStart=/usr/local/bin/rclone-gdrive-watch.sh /data/GoogleDrive gdrive:
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

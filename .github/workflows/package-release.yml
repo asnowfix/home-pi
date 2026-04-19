@@ -69,6 +69,18 @@ jobs:
           mkdir -p .debpkg/etc/udev/rules.d
           cp 99-usb-automount.rules .debpkg/etc/udev/rules.d/99-usb-automount.rules
 
+          # rclone Google Drive sync
+          cp rclone-gdrive-watch.sh .debpkg/usr/local/bin/rclone-gdrive-watch.sh
+          chmod +x .debpkg/usr/local/bin/rclone-gdrive-watch.sh
+          cp homepi-gdrive-setup .debpkg/usr/local/bin/homepi-gdrive-setup
+          chmod +x .debpkg/usr/local/bin/homepi-gdrive-setup
+
+          # systemd service files for rclone sync
+          mkdir -p .debpkg/etc/systemd/system
+          cp systemd/rclone-watch-gdrive.service .debpkg/etc/systemd/system/rclone-watch-gdrive.service
+          cp systemd/rclone-pull-gdrive.service .debpkg/etc/systemd/system/rclone-pull-gdrive.service
+          cp systemd/rclone-pull-gdrive.timer .debpkg/etc/systemd/system/rclone-pull-gdrive.timer
+
           # DEBIAN maintainer scripts
           mkdir -p .debpkg/DEBIAN
           cp debian/postinst.sh .debpkg/DEBIAN/postinst
@@ -84,7 +96,7 @@ jobs:
           maintainer: Francois-Xavier 'FiX' KOWALSKI <fix.kowalski@gmail.com>
           version: refs/tags/${{ steps.version.outputs.release }}
           arch: '${{ matrix.arch }}'
-          depends: 'udev, python3 (>= 3.7), python3-pip, python3-venv'
+          depends: 'udev, python3 (>= 3.7), python3-pip, python3-venv, curl, inotify-tools'
           desc: 'Home server meta-package for Raspberry Pi - ships scripts, configuration, and dependencies (USB automount, Maestral Dropbox sync, and more)'
           homepage: 'https://github.com/asnowfix/home-pi'
       - name: Upload DEB as artifact
