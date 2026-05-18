@@ -1,0 +1,15 @@
+[Unit]
+Description=Maestral Dropbox sync for %i
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=exec
+User=%i
+ExecStart=/opt/maestral-venv/bin/maestral start -f
+ExecStop=/opt/maestral-venv/bin/maestral stop
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

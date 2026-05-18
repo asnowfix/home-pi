@@ -57,20 +57,43 @@ if [ "$1" = "configure" ]; then
     echo "Maestral installed successfully!"
     echo "To set up Dropbox sync, run: maestral auth link"
     echo "To start syncing: maestral start"
+    echo "For more commands: maestral --help"
 
-    # Install inotify-tools
-    echo ""
-    echo "Installing inotify-tools..."
-    apt-get install -y inotify-tools
+    # Auto-start Maestral for whitelisted users that have a config
+    MAESTRAL_USERS="/etc/homepi/maestral-users"
+    if [ -f "$MAESTRAL_USERS" ]; then
+        echo ""
+        echo "Configuring Maestral auto-start for whitelisted users..."
+        while IFS= read -r user || [ -n "$user" ]; do
+            # Skip comments and blank lines
+            user=$(echo "$user" | sed 's/#.*//' | xargs)
+            [ -z "$user" ] && continue
 
-    # Install rclone: try apt if version >= 1.65, otherwise use official installer
-    echo "Installing rclone..."
-    RCLONE_APT_VERSION=$(apt-cache policy rclone 2>/dev/null | grep 'Candidate:' | awk '{print $2}' | cut -d'-' -f1 | cut -d':' -f2)
-    if [ -n "$RCLONE_APT_VERSION" ] && dpkg --compare-versions "$RCLONE_APT_VERSION" ge "$RCLONE_MIN_VERSION"; then
-        echo "apt rclone $RCLONE_APT_VERSION >= $RCLONE_MIN_VERSION, installing from apt..."
-        apt-get install -y rclone
+            # Resolve home directory
+            user_home=$(eval echo "~$user" 2>/dev/null)
+            if [ ! -d "$user_home" ]; then
+                echo "WARNING: User '$user' has no home directory, skipping" >&2
+                continue
+            fi
+
+            # Only start if user has a Maestral config
+            if [ -f "$user_home/.config/maestral/maestral.ini" ]; then
+                echo "Enabling maestral@${user}.service"
+                systemctl enable "maestral@${user}.service"
+                systemctl start "maestral@${user}.service" || true
+            else
+                echo "Skipping $user — no Maestral config found at $user_home/.config/maestral/maestral.ini"
+                echo "  Run 'maestral auth link' as $user first, then 'sudo systemctl enable --now maestral@${user}'"
+            fi
+        done < "$MAESTRAL_USERS"
+    fi
+
+    # Install rclone via official installer (apt rclone on Bookworm is 1.60 — too old for bisync)
+    # inotify-tools and curl are declared as package dependencies and installed by apt beforehand.
+    if command -v rclone >/dev/null && dpkg --compare-versions "$(rclone version --check 2>/dev/null | awk '/rclone/{print $2}' | tr -d v)" ge "$RCLONE_MIN_VERSION" 2>/dev/null; then
+        echo "rclone $(rclone --version | head -1) already installed — skipping."
     else
-        echo "apt rclone version too old or unavailable, installing from official installer..."
+        echo "Installing rclone from official installer..."
         curl https://rclone.org/install.sh | bash
     fi
 

@@ -7,7 +7,22 @@ MAESTRAL_VENV="/opt/maestral-venv"
 if [ "$1" = "remove" ] || [ "$1" = "upgrade" ]; then
     echo "Preparing to remove homepi-server..."
 
-    # Stop Maestral if it's running
+
+    # Stop Maestral systemd services for all whitelisted users
+    MAESTRAL_USERS="/etc/homepi/maestral-users"
+    if [ -f "$MAESTRAL_USERS" ]; then
+        while IFS= read -r user || [ -n "$user" ]; do
+            user=$(echo "$user" | sed 's/#.*//' | xargs)
+            [ -z "$user" ] && continue
+            if systemctl is-active --quiet "maestral@${user}.service" 2>/dev/null; then
+                echo "Stopping maestral@${user}.service..."
+                systemctl stop "maestral@${user}.service" || true
+            fi
+            systemctl disable "maestral@${user}.service" 2>/dev/null || true
+        done < "$MAESTRAL_USERS"
+    fi
+
+    # Also stop any manually-started Maestral daemon
     if [ -f "$MAESTRAL_VENV/bin/maestral" ]; then
         echo "Stopping Maestral daemon..."
         "$MAESTRAL_VENV/bin/maestral" stop 2>/dev/null || true

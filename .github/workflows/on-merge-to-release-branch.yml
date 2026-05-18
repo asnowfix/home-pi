@@ -1,0 +1,40 @@
+name: on-merge-to-release-branch
+on:
+  push:
+    branches:
+      - 'v[0-9]+.[0-9]+.x'
+permissions:
+  contents: write
+jobs:
+  tag-next-patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Compute and push next patch tag
+        run: |
+          set -euo pipefail
+          BRANCH="${GITHUB_REF_NAME}"
+          if [[ ! "$BRANCH" =~ ^v([0-9]+)\.([0-9]+)\.x$ ]]; then
+            echo "Branch '$BRANCH' does not match v<MAJOR>.<MINOR>.x pattern" >&2
+            exit 1
+          fi
+          MAJOR="${BASH_REMATCH[1]}"
+          MINOR="${BASH_REMATCH[2]}"
+
+          # Find the highest existing patch tag for this major.minor
+          LATEST=$(git tag -l "v${MAJOR}.${MINOR}.*" | sort -V | tail -1)
+          if [ -z "$LATEST" ]; then
+            NEXT="v${MAJOR}.${MINOR}.1"
+          else
+            PATCH=$(echo "$LATEST" | awk -F. '{print $3}')
+            NEXT="v${MAJOR}.${MINOR}.$((PATCH + 1))"
+          fi
+
+          echo "Latest tag for v${MAJOR}.${MINOR}.x: ${LATEST:-none}"
+          echo "Creating tag: $NEXT"
+          git tag "$NEXT"
+          git push origin "$NEXT"
+          echo "Tag $NEXT pushed — on-tag-main.yml will trigger packaging."
