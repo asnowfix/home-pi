@@ -1,0 +1,12 @@
+[Unit]
+Description=rclone pull – GDrive → local (GoogleDrive)
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=@@RCLONE_USER@@
+ExecStart=rclone bisync gdrive: /data/GoogleDrive \
+    --fast-list \
+    --transfers 4 \
+    --log-level INFO \
+    --log-file /var/log/rclone-sync.log

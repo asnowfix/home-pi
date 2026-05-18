@@ -12,6 +12,9 @@ What's shipped today:
 - [x] USB automount via udev rules (`usb-automount.sh`, `99-usb-automount.rules`)
 - [x] Diagnostic tooling (`diagnose-disks.sh`)
 - [x] Maestral Dropbox sync client (Python venv at `/opt/maestral-venv/`)
+- [x] Google Drive sync via rclone + inotify (`rclone-gdrive-watch.sh`, `systemd/rclone-*`)
+  - push: inotify watches `/data/GoogleDrive` → `gdrive:` with 5s debounce
+  - pull: systemd timer polls `gdrive:` → `/data/GoogleDrive` every 30s via bisync
 - [x] Debian meta-package build pipeline (`homepi-server` ARM64 .deb)
 - [x] Orchestrator-pattern CI/CD (tag → build → draft release)
 - [x] Manual install path (`install-usb-automount.sh`)

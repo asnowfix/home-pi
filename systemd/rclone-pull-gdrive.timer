@@ -1,0 +1,10 @@
+[Unit]
+Description=Timer rclone pull GoogleDrive – every 30 seconds
+
+[Timer]
+OnBootSec=60
+OnUnitActiveSec=30s
+Unit=rclone-pull-gdrive.service
+
+[Install]
+WantedBy=timers.target

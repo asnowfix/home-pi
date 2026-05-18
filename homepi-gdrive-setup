@@ -1,0 +1,93 @@
+#!/bin/bash
+# homepi-gdrive-setup — configure Google Drive sync for homepi-server
+# Safe to re-run: skips steps already completed.
+# Run as root (sudo homepi-gdrive-setup).
+
+set -e
+
+GDRIVE_LOCAL="/data/GoogleDrive"
+LOGFILE="/var/log/rclone-sync.log"
+RCLONE_USER="${SUDO_USER:-$(getent passwd 1000 | cut -d: -f1)}"
+RCLONE_CONF="/home/${RCLONE_USER}/.config/rclone/rclone.conf"
+
+die() { echo "ERROR: $*" >&2; exit 1; }
+
+[ "$(id -u)" -eq 0 ] || die "Must be run as root: sudo homepi-gdrive-setup"
+[ -n "$RCLONE_USER" ] || die "Could not detect target user"
+command -v rclone >/dev/null || die "rclone not installed — run: sudo dpkg-reconfigure homepi-server"
+command -v inotifywait >/dev/null || die "inotify-tools not installed — run: sudo apt install inotify-tools"
+
+echo "=== homepi Google Drive setup (user: ${RCLONE_USER}) ==="
+echo ""
+
+# ── Step 1: rclone remote ────────────────────────────────────────────────────
+if su -c "rclone listremotes" "$RCLONE_USER" 2>/dev/null | grep -q "^gdrive:"; then
+    echo "[1/4] gdrive remote already configured — skipping."
+else
+    echo "[1/4] Configuring rclone Google Drive remote."
+    echo ""
+    echo "  This Pi has no browser. rclone will print a URL — open it on any"
+    echo "  device (phone, laptop) that has a browser and is logged into Google."
+    echo ""
+    echo "  In the rclone wizard, when asked:"
+    echo "    - Storage type   → enter the number for 'Google Drive'"
+    echo "    - Client ID/Secret → leave blank (press Enter)"
+    echo "    - Scope          → enter 1 (full access)"
+    echo "    - Root folder ID → leave blank"
+    echo "    - Service account file → leave blank"
+    echo "    - Edit advanced config → n"
+    echo "    - Use auto config?  → *** ANSWER n (no) ***"
+    echo "      rclone will print a URL — open it in a browser on another device."
+    echo "      Paste the 'Success code' back here."
+    echo "    - Configure as Team Drive → n"
+    echo "    - Remote name    → gdrive"
+    echo ""
+    read -rp "Press Enter to launch rclone config..."
+    su -c "rclone config" "$RCLONE_USER"
+    echo ""
+fi
+
+# ── Step 2: verify connection ────────────────────────────────────────────────
+echo "[2/4] Testing connection to gdrive:..."
+if ! su -c "rclone lsd gdrive:" "$RCLONE_USER"; then
+    die "Cannot reach gdrive: — check the remote configuration and retry: sudo homepi-gdrive-setup"
+fi
+echo "      Connection OK."
+echo ""
+
+# ── Step 3: initial bisync ───────────────────────────────────────────────────
+mkdir -p "$GDRIVE_LOCAL"
+chown "${RCLONE_USER}:${RCLONE_USER}" "$GDRIVE_LOCAL"
+touch "$LOGFILE"
+chmod 644 "$LOGFILE"
+
+BISYNC_STATE_DIR="/home/${RCLONE_USER}/.cache/rclone/bisync"
+# bisync creates a state file; its absence means --resync is needed
+if find "$BISYNC_STATE_DIR" -name '*GoogleDrive*' -o -name '*gdrive*' 2>/dev/null | grep -q .; then
+    echo "[3/4] bisync state found — skipping --resync."
+else
+    echo "[3/4] Running initial bisync (may take a while for large drives)..."
+    su -c "rclone bisync gdrive: ${GDRIVE_LOCAL} --resync --fast-list --transfers 4 --log-level INFO --log-file ${LOGFILE}" "$RCLONE_USER"
+    echo "      Initial bisync complete."
+fi
+echo ""
+
+# ── Step 4: start services ───────────────────────────────────────────────────
+echo "[4/4] Starting sync services..."
+systemctl daemon-reload
+systemctl enable rclone-watch-gdrive.service
+systemctl enable rclone-pull-gdrive.timer
+systemctl restart rclone-watch-gdrive.service
+systemctl restart rclone-pull-gdrive.timer
+echo ""
+echo "=== Google Drive sync is running ==="
+echo ""
+echo "  Local folder : ${GDRIVE_LOCAL}"
+echo "  Push (local→Drive) : inotify, ~5s latency"
+echo "  Pull (Drive→local) : every 30s via systemd timer"
+echo ""
+echo "  Monitor:"
+echo "    sudo journalctl -fu rclone-watch-gdrive"
+echo "    tail -f ${LOGFILE}"
+echo ""
+echo "Re-run 'sudo homepi-gdrive-setup' at any time to repair or reconfigure."

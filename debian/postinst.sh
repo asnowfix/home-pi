@@ -2,6 +2,9 @@
 set -e
 
 MAESTRAL_VENV="/opt/maestral-venv"
+RCLONE_USER="${SUDO_USER:-$(getent passwd 1000 | cut -d: -f1)}"
+GDRIVE_LOCAL="/data/GoogleDrive"
+RCLONE_MIN_VERSION="1.65"
 
 # Create log file with appropriate permissions
 touch /var/log/usb-automount.log
@@ -16,40 +19,40 @@ if [ "$1" = "configure" ]; then
     echo "Reloading udev rules..."
     udevadm control --reload-rules
     udevadm trigger
-    
+
     echo "homepi-server: USB automount configured."
     echo "USB devices will now automatically mount to /media/<label> when plugged in."
     echo "Check /var/log/usb-automount.log for mount/unmount activity."
-    
+
     # Install Maestral Dropbox client
     echo ""
     echo "Installing Maestral Dropbox client..."
-    
+
     # Create virtual environment for Maestral
     if [ ! -d "$MAESTRAL_VENV" ]; then
         echo "Creating Python virtual environment at $MAESTRAL_VENV..."
         python3 -m venv "$MAESTRAL_VENV"
     fi
-    
+
     # Install/upgrade Maestral (without GUI to avoid PyQt6 build issues on Pi)
     echo "Installing Maestral package..."
     if ! "$MAESTRAL_VENV/bin/python3" -m pip install --upgrade pip; then
         echo "ERROR: Failed to upgrade pip" >&2
         exit 1
     fi
-    
+
     if ! "$MAESTRAL_VENV/bin/python3" -m pip install --upgrade maestral; then
         echo "ERROR: Failed to install Maestral" >&2
         exit 1
     fi
-    
+
     # Create symlink to make maestral command available system-wide
     if [ -e /usr/local/bin/maestral ] && [ ! -L /usr/local/bin/maestral ]; then
         echo "WARNING: /usr/local/bin/maestral exists and is not a symlink" >&2
         echo "WARNING: It will be replaced with a symlink to the packaged version" >&2
     fi
     ln -sf "$MAESTRAL_VENV/bin/maestral" /usr/local/bin/maestral
-    
+
     echo ""
     echo "Maestral installed successfully!"
     echo "To set up Dropbox sync, run: maestral auth link"
@@ -84,6 +87,45 @@ if [ "$1" = "configure" ]; then
             fi
         done < "$MAESTRAL_USERS"
     fi
+
+    # Install rclone via official installer (apt rclone on Bookworm is 1.60 — too old for bisync)
+    # inotify-tools and curl are declared as package dependencies and installed by apt beforehand.
+    if command -v rclone >/dev/null && dpkg --compare-versions "$(rclone version --check 2>/dev/null | awk '/rclone/{print $2}' | tr -d v)" ge "$RCLONE_MIN_VERSION" 2>/dev/null; then
+        echo "rclone $(rclone --version | head -1) already installed — skipping."
+    else
+        echo "Installing rclone from official installer..."
+        curl https://rclone.org/install.sh | bash
+    fi
+
+    # Raise inotify watch limit
+    if ! grep -q "fs.inotify.max_user_watches" /etc/sysctl.conf; then
+        echo "fs.inotify.max_user_watches=524288" >> /etc/sysctl.conf
+        sysctl -p
+    fi
+
+    # Create sync directory and log file
+    mkdir -p "$GDRIVE_LOCAL"
+    chown "${RCLONE_USER}:${RCLONE_USER}" "$GDRIVE_LOCAL"
+    touch /var/log/rclone-sync.log
+    chmod 644 /var/log/rclone-sync.log
+
+    # Substitute user placeholder in shipped service files and enable (do not start)
+    sed -i "s/@@RCLONE_USER@@/${RCLONE_USER}/g" /etc/systemd/system/rclone-watch-gdrive.service
+    sed -i "s/@@RCLONE_USER@@/${RCLONE_USER}/g" /etc/systemd/system/rclone-pull-gdrive.service
+    systemctl daemon-reload
+    systemctl enable rclone-watch-gdrive.service
+    systemctl enable rclone-pull-gdrive.timer
+
+    echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo " Google Drive sync is installed but NOT yet started."
+    echo " This Pi has no browser — authentication is done via another"
+    echo " device. Run the setup wizard to complete configuration:"
+    echo ""
+    echo "   sudo homepi-gdrive-setup"
+    echo ""
+    echo " Safe to re-run at any time if something goes wrong."
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 fi
 
 # Exit successfully
