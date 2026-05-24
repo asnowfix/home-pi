@@ -4,7 +4,9 @@
 LOG="/var/log/usb-automount.log"
 
 log_msg() {
-    echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" >> "${LOG}"
+    local msg="$(date '+%Y-%m-%d %H:%M:%S') - $1"
+    echo "${msg}" >> "${LOG}"
+    echo "${msg}" >&2
 }
 
 # Validate input parameters
@@ -55,25 +57,32 @@ do_mount() {
     fi
 
     # Get the filesystem label
-    LABEL=$(blkid -s LABEL -o value "${DEVICE}")
-    [ -z "${LABEL}" ] && LABEL="${DEVBASE}"
-
-    # Create mount point with device name to avoid conflicts with duplicate labels
-    MOUNT_POINT="/media/${LABEL}-${DEVBASE}"
+    LABEL=$(blkid -s LABEL -o value "${DEVICE}" 2>&1)
+    if [ -z "${LABEL}" ]; then
+        log_msg "No label found for ${DEVICE}, using device name"
+        MOUNT_POINT="/media/${DEVBASE}"
+    else
+        log_msg "Label for ${DEVICE}: ${LABEL}"
+        # Append device name to avoid conflicts when multiple devices share the same label
+        MOUNT_POINT="/media/${LABEL}-${DEVBASE}"
+    fi
+    log_msg "Creating mount point ${MOUNT_POINT}"
     mkdir -p "${MOUNT_POINT}"
 
     # Mount the device with appropriate options
     # umask=000 gives full permissions, works for FAT/NTFS
     # For ext4, we'll add uid/gid options
-    FSTYPE=$(blkid -s TYPE -o value "${DEVICE}")
+    FSTYPE=$(blkid -s TYPE -o value "${DEVICE}" 2>&1)
+    log_msg "Detected filesystem type: ${FSTYPE:-unknown}"
 
     if [[ "${FSTYPE}" == "vfat" ]] || [[ "${FSTYPE}" == "ntfs" ]] || [[ "${FSTYPE}" == "exfat" ]]; then
         MOUNT_OPTS="rw,users,umask=000"
-        mount -o "${MOUNT_OPTS}" "${DEVICE}" "${MOUNT_POINT}"
+        log_msg "Mounting ${DEVICE} with umask=000 (fat/ntfs/exfat)"
     else
         MOUNT_OPTS="rw,users"
-        mount -o "${MOUNT_OPTS}" "${DEVICE}" "${MOUNT_POINT}"
+        log_msg "Mounting ${DEVICE} with default options"
     fi
+    MOUNT_OUT=$(mount -o "${MOUNT_OPTS}" "${DEVICE}" "${MOUNT_POINT}" 2>&1)
 
     if [ $? -eq 0 ]; then
         log_msg "Mounted ${DEVICE} (${FSTYPE}) at ${MOUNT_POINT}"
@@ -84,7 +93,7 @@ do_mount() {
             log_msg "WARNING: No UUID for ${DEVICE}, mount will not persist across reboots"
         fi
     else
-        log_msg "Failed to mount ${DEVICE}"
+        log_msg "Failed to mount ${DEVICE}: ${MOUNT_OUT}"
         if rmdir "${MOUNT_POINT}" 2>/dev/null; then
             log_msg "Removed empty mount point ${MOUNT_POINT}"
         else
@@ -100,8 +109,7 @@ do_unmount() {
     fi
 
     UUID=$(blkid -s UUID -o value "${DEVICE}" 2>/dev/null)
-
-    umount -l "${DEVICE}"
+    UMOUNT_OUT=$(umount -l "${DEVICE}" 2>&1)
 
     if [ $? -eq 0 ]; then
         log_msg "Unmounted ${DEVICE} from ${MOUNT_POINT}"
@@ -113,7 +121,7 @@ do_unmount() {
             log_msg "Could not remove mount point ${MOUNT_POINT} (may not be empty)"
         fi
     else
-        log_msg "Failed to unmount ${DEVICE}"
+        log_msg "Failed to unmount ${DEVICE}: ${UMOUNT_OUT}"
     fi
 }
 
