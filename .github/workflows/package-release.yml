@@ -88,6 +88,11 @@ jobs:
           cp systemd/rclone-pull-gdrive.service .debpkg/etc/systemd/system/rclone-pull-gdrive.service
           cp systemd/rclone-pull-gdrive.timer .debpkg/etc/systemd/system/rclone-pull-gdrive.timer
 
+          # Locale sanitizer (fixes macOS LC_CTYPE=UTF-8 injection via SSH)
+          mkdir -p .debpkg/etc/profile.d
+          cp locale/locale-sanitize.sh .debpkg/etc/profile.d/locale-sanitize.sh
+          chmod 644 .debpkg/etc/profile.d/locale-sanitize.sh
+
           # DEBIAN maintainer scripts
           mkdir -p .debpkg/DEBIAN
           cp debian/postinst.sh .debpkg/DEBIAN/postinst

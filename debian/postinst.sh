@@ -24,6 +24,13 @@ if [ "$1" = "configure" ]; then
     echo "USB devices will now automatically mount to /media/<label> when plugged in."
     echo "Check /var/log/usb-automount.log for mount/unmount activity."
 
+    # Ensure en_US.UTF-8 locale is generated and set as system default
+    if ! grep -q "^en_US.UTF-8" /etc/locale.gen 2>/dev/null; then
+        echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen
+    fi
+    locale-gen en_US.UTF-8
+    update-locale LANG=en_US.UTF-8
+
     # Install Maestral Dropbox client
     echo ""
     echo "Installing Maestral Dropbox client..."
