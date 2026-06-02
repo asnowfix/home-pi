@@ -1,0 +1,153 @@
+name: PR Package Build
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  build-pr-package:
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Prepare package content
+        run: |
+          mkdir -p .debpkg/usr/local/bin
+          cp usb-automount.sh .debpkg/usr/local/bin/usb-automount.sh
+          chmod +x .debpkg/usr/local/bin/usb-automount.sh
+
+          cp diagnose-disks.sh .debpkg/usr/local/bin/diagnose-disks.sh
+          chmod +x .debpkg/usr/local/bin/diagnose-disks.sh
+
+          mkdir -p .debpkg/etc/udev/rules.d
+          cp 99-usb-automount.rules .debpkg/etc/udev/rules.d/99-usb-automount.rules
+
+          mkdir -p .debpkg/etc/systemd/system
+          cp maestral/maestral@.service .debpkg/etc/systemd/system/maestral@.service
+
+          mkdir -p .debpkg/etc/homepi
+          cp maestral/maestral-users .debpkg/etc/homepi/maestral-users
+
+          cp rclone-gdrive-watch.sh .debpkg/usr/local/bin/rclone-gdrive-watch.sh
+          chmod +x .debpkg/usr/local/bin/rclone-gdrive-watch.sh
+          cp homepi-gdrive-setup .debpkg/usr/local/bin/homepi-gdrive-setup
+          chmod +x .debpkg/usr/local/bin/homepi-gdrive-setup
+
+          cp systemd/rclone-watch-gdrive.service .debpkg/etc/systemd/system/rclone-watch-gdrive.service
+          cp systemd/rclone-pull-gdrive.service .debpkg/etc/systemd/system/rclone-pull-gdrive.service
+          cp systemd/rclone-pull-gdrive.timer .debpkg/etc/systemd/system/rclone-pull-gdrive.timer
+
+          mkdir -p .debpkg/etc/profile.d
+          cp locale/locale-sanitize.sh .debpkg/etc/profile.d/locale-sanitize.sh
+          chmod 644 .debpkg/etc/profile.d/locale-sanitize.sh
+
+          mkdir -p .debpkg/DEBIAN
+          cp debian/postinst.sh .debpkg/DEBIAN/postinst
+          cp debian/prerm.sh .debpkg/DEBIAN/prerm
+          cp debian/postrm.sh .debpkg/DEBIAN/postrm
+          chmod +x .debpkg/DEBIAN/postinst .debpkg/DEBIAN/prerm .debpkg/DEBIAN/postrm
+
+      - name: Build Debian package
+        id: build-deb
+        uses: jiro4989/build-deb-action@v4
+        with:
+          package: homepi-server
+          package_root: .debpkg
+          maintainer: Francois-Xavier 'FiX' KOWALSKI <fix.kowalski@gmail.com>
+          version: "0.0.0~pr${{ github.event.pull_request.number }}"
+          arch: arm64
+          depends: 'udev, python3 (>= 3.7), python3-pip, python3-venv, inotify-tools, curl'
+          desc: 'Home server meta-package for Raspberry Pi - ships scripts, configuration, and dependencies (USB automount, Maestral Dropbox sync, and more)'
+          homepage: 'https://github.com/asnowfix/home-pi'
+
+      - name: Upsert draft pre-release for PR
+        uses: ncipollo/release-action@v1
+        with:
+          tag: pr-${{ github.event.pull_request.number }}
+          commit: ${{ github.event.pull_request.head.sha }}
+          name: "PR #${{ github.event.pull_request.number }} — ${{ github.event.pull_request.title }}"
+          draft: true
+          prerelease: true
+          allowUpdates: true
+          omitArtifactsDuringUpdate: true
+          body: |
+            Test package for PR #${{ github.event.pull_request.number }}: ${{ github.event.pull_request.html_url }}
+            Built from commit ${{ github.event.pull_request.head.sha }}
+
+            ```
+            sudo dpkg -i homepi-server_0.0.0~pr${{ github.event.pull_request.number }}_arm64.deb
+            ```
+
+      - name: Upload package to PR release (clobber existing)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload \
+            "pr-${{ github.event.pull_request.number }}" \
+            *.deb \
+            --clobber \
+            --repo "${{ github.repository }}"
+
+      - name: Comment on PR with download link
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request.number;
+            const tag = `pr-${pr}`;
+            const url = `https://github.com/${context.repo.owner}/${context.repo.repo}/releases/tag/${tag}`;
+            const sha = context.payload.pull_request.head.sha.slice(0, 7);
+            const body = [
+              '### Test package',
+              '',
+              `📦 [Download \`homepi-server_0.0.0~pr${pr}_arm64.deb\`](${url})`,
+              '',
+              '```',
+              `sudo dpkg -i homepi-server_0.0.0~pr${pr}_arm64.deb`,
+              '```',
+              '',
+              `*Built from ${sha} — updated on every push.*`,
+            ].join('\n');
+
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr,
+            });
+            const existing = comments.data.find(
+              c => c.user.type === 'Bot' && c.body.includes('Test package')
+            );
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr,
+                body,
+              });
+            }
+
+  cleanup-pr-package:
+    if: github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete PR release and tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="pr-${{ github.event.pull_request.number }}"
+          gh release delete "$TAG" --repo "${{ github.repository }}" --yes 2>/dev/null || true
+          git push --delete "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" "$TAG" 2>/dev/null || true

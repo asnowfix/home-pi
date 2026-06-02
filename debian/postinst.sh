@@ -97,11 +97,14 @@ if [ "$1" = "configure" ]; then
 
     # Install rclone via official installer (apt rclone on Bookworm is 1.60 — too old for bisync)
     # inotify-tools and curl are declared as package dependencies and installed by apt beforehand.
-    if command -v rclone >/dev/null && dpkg --compare-versions "$(rclone version --check 2>/dev/null | awk '/rclone/{print $2}' | tr -d v)" ge "$RCLONE_MIN_VERSION" 2>/dev/null; then
-        echo "rclone $(rclone --version | head -1) already installed — skipping."
+    # Use `rclone --version` (always exits 0) instead of `rclone version --check` (exits non-zero
+    # when up to date and outputs a beta URL line that breaks the awk version extraction).
+    RCLONE_VER=$(rclone --version 2>/dev/null | awk 'NR==1{gsub(/^v/,"",$2); print $2}')
+    if command -v rclone >/dev/null && [ -n "$RCLONE_VER" ] && dpkg --compare-versions "$RCLONE_VER" ge "$RCLONE_MIN_VERSION" 2>/dev/null; then
+        echo "rclone v${RCLONE_VER} already installed — skipping."
     else
         echo "Installing rclone from official installer..."
-        curl https://rclone.org/install.sh | bash
+        curl https://rclone.org/install.sh | bash || true
     fi
 
     # Raise inotify watch limit
