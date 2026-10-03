@@ -11,7 +11,7 @@ The app shows the robot offline, but **it is not a TLS/certificate/time problem.
 A scoped packet capture (see `capture/`) proved the robot completes a healthy TLS
 session to AWS IoT (`54.84.183.59:443`) and exchanges application data — and its
 firmware is from **2023-10-03**, not 8 years old. The "expired root CA → spoof NTP
-to time-travel" idea in `../gemini-code-1791015283393.md` is therefore **wrong for
+to time-travel" idea from the original Gemini plan is therefore **wrong for
 this robot**; full write-up and disproof in `../iot-date-spoof-procedure.md`.
 
 Because local control works independently of the cloud, we can still command it.

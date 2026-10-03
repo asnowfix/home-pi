@@ -1,7 +1,7 @@
 # Procedure: Diagnose an Offline IoT Device & (If Warranted) Time-Travel It Onto the Cloud
 
-> Revised, diagnosis-first rework of `gemini-code-1791015283393.md`.
-> The original is kept untouched for reference. This version does **not** assume the
+> Revised, diagnosis-first rework of a Gemini-generated plan (not kept in this repo).
+> This version does **not** assume the
 > cause, replaces the unreliable ARP-spoofing section with a clean gateway takeover,
 > removes the original's internal contradictions, and gates the spoofing behind
 > evidence that it can actually work.
