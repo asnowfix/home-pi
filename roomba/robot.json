@@ -1,0 +1,10 @@
+{
+  "name": "Edmond",
+  "blid": "7F8D5D6C16A14CF0A277D3A64A1FBB5D",
+  "host": "192.168.1.74",
+  "mac": "50:14:79:07:BE:71",
+  "sku": "i715640",
+  "firmware": "lewis+22.52.10+2023-10-03-e032ab4903c+Firmware-Build+4820",
+  "proto": "mqtt",
+  "note": "BLID from on-LAN UDP discovery (dorita980). Local password is NOT here; it is fetched once via getpass.js after a physical HOME-button press and saved to roomba-creds.json (gitignored)."
+}

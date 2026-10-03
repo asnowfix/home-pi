@@ -1,0 +1,17 @@
+{
+  "name": "homepi-roomba-local-control",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local (cloud-independent) control of the home Roomba i7 via dorita980",
+  "type": "commonjs",
+  "scripts": {
+    "discover": "node discover.js",
+    "getpass": "node getpass.js",
+    "clean": "node go.js",
+    "start": "node start.js"
+  },
+  "dependencies": {
+    "dorita980": "^4.0.0"
+  },
+  "engines": { "node": ">=18" }
+}
