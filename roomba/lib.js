@@ -1,8 +1,10 @@
 'use strict';
 // Shared helpers for local Roomba control via dorita980.
-// - resolveHost(): find the robot's CURRENT IP (DHCP is dynamic) by broadcast
-//   discovery matching our BLID; env ROOMBA_HOST overrides; robot.json host is a
-//   last-resort fallback.
+// - resolveHost(): find the robot's CURRENT IP (DHCP is dynamic). Tries, in order:
+//   env ROOMBA_HOST; the LAN router's host table by MAC (fast, no broadcast);
+//   UDP broadcast discovery matching our BLID; robot.json host (stale fallback).
+// - resolveHostViaRouter(): ask the SFR/Efixo box API (lan.getHostsList, which is
+//   unauthenticated) for the IP currently leased to the robot's MAC.
 // - getPassword(): send the magic packet and extract the password as the longest
 //   printable-ASCII run from the raw response (the dorita980 fixed-offset slice is
 //   WRONG for the i7 and yields a bad password).
@@ -10,8 +12,12 @@
 //   the robot wakes.
 const dgram = require('dgram');
 const tls = require('tls');
+const http = require('http');
 const { constants } = require('crypto');
 const robot = require('./robot.json');
+
+// LAN router that answers the SFR/Efixo local API (overridable; empty string disables).
+const ROUTER = process.env.ROOMBA_ROUTER !== undefined ? process.env.ROOMBA_ROUTER : '192.168.1.1';
 
 const TLS_OPTS = {
   timeout: 10000,
@@ -41,9 +47,44 @@ function discoverRobot(blid, timeoutMs = 6000) {
   });
 }
 
-// Current IP: ROOMBA_HOST env > live discovery by blid > robot.json host (stale fallback).
+// Ask the LAN router's host table (SFR/Efixo API: lan.getHostsList, unauthenticated)
+// for the IP currently leased to `mac`. The box always knows the live lease, so this
+// is faster and more reliable than UDP broadcast. Rejects if no router, no match, or
+// the box doesn't speak this API.
+function resolveHostViaRouter(mac, timeoutMs = 3000) {
+  return new Promise((resolve, reject) => {
+    if (!ROUTER || !mac) return reject(new Error('router resolve disabled (no ROUTER or MAC)'));
+    const want = mac.toLowerCase();
+    const req = http.get({ host: ROUTER, path: '/api/1.0/?method=lan.getHostsList', timeout: timeoutMs }, (res) => {
+      let body = '';
+      res.setEncoding('utf8');
+      res.on('data', (d) => { body += d; });
+      res.on('end', () => {
+        // <host ... ip="x.x.x.x" ... mac="aa:bb:.." ... status="online"/> (attribute order varies)
+        let best = null;
+        for (const m of body.matchAll(/<host\b[^>]*>/g)) {
+          const tag = m[0];
+          const macM = tag.match(/\bmac="([^"]+)"/i);
+          const ipM = tag.match(/\bip="([^"]+)"/i);
+          if (!macM || !ipM || macM[1].toLowerCase() !== want) continue;
+          const online = /\bstatus="online"/i.test(tag);
+          if (online) return resolve(ipM[1]);        // prefer a live lease
+          if (!best) best = ipM[1];                   // else remember last-known
+        }
+        best ? resolve(best) : reject(new Error('MAC ' + mac + ' not in router host list'));
+      });
+    });
+    req.on('timeout', () => { req.destroy(new Error('router API timeout')); });
+    req.on('error', reject);
+  });
+}
+
+// Current IP: ROOMBA_HOST env > router host table by MAC > broadcast by blid > robot.json host.
 async function resolveHost() {
   if (process.env.ROOMBA_HOST) return process.env.ROOMBA_HOST;
+  try {
+    return await resolveHostViaRouter(robot.mac);
+  } catch (e) { /* router may be absent/other LAN — fall through to broadcast */ }
   try {
     const info = await discoverRobot(robot.blid);
     return info.ip;
@@ -91,4 +132,4 @@ async function grabPassword(host, attempts = 15, delayMs = 2000) {
   throw last || new Error('grabPassword failed');
 }
 
-module.exports = { robot, TLS_OPTS, discoverRobot, resolveHost, getPassword, grabPassword };
+module.exports = { robot, TLS_OPTS, discoverRobot, resolveHostViaRouter, resolveHost, getPassword, grabPassword };

@@ -24,9 +24,15 @@ local control works — which is the whole point. The password lives only in
 `roomba-creds.json` (gitignored) + a durable copy at `~/.homepi/roomba-creds.json`.
 
 The robot's **IP is DHCP-assigned and changes** (it moved 192.168.1.74 → .50 once),
-so the scripts resolve it **live by broadcast discovery matching the BLID** — no
-IP is hardcoded. Override with `ROOMBA_HOST` if needed; consider a DHCP reservation
-for the robot's MAC.
+so the scripts resolve it **live** — no IP is hardcoded. `resolveHost()` tries, in order:
+`ROOMBA_HOST` env → the **LAN router's host table by MAC** (the SFR/Efixo box API
+`lan.getHostsList`, unauthenticated — fast, no broadcast) → **UDP broadcast discovery
+by BLID** → `robot.json` host (stale fallback). On a non-SFR LAN the router step just
+fails over to broadcast. Override the router with `ROOMBA_ROUTER` (set it empty to skip).
+
+A DHCP reservation was considered but **the SFR box API can't create one** — its method
+set has no DHCP static-lease/reservation call (only `lan.addDnsHost`, a DNS alias). It'd
+be web-UI-only, and it's unnecessary anyway since resolution is live.
 
 ## Usage
 
@@ -56,7 +62,7 @@ Other commands: `npm run discover` prints the robot's current public info/IP;
 | File | What |
 |---|---|
 | `robot.json` | Robot identity (name, **blid**, MAC, SKU, firmware). Non-secret; blid is discoverable on-LAN. No IP (discovered live). |
-| `lib.js` | Shared helpers: broadcast IP discovery by blid, password fetch (printable-run parse), connect retries. |
+| `lib.js` | Shared helpers: live IP resolution (router host-table by MAC, then broadcast by blid), password fetch (printable-run parse), connect retries. |
 | `discover.js` | On-LAN UDP discovery → prints robot public info + current IP. No creds/button. |
 | `getpass.js` | Fetch the local password (needs the HOME-button press). Saves `roomba-creds.json`. |
 | `go.js` | One-shot: get/reuse password → connect → **start full clean**. |
