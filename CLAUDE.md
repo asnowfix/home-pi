@@ -10,6 +10,10 @@ Current components:
 1. **USB Automount** - udev-triggered script that auto-mounts/unmounts USB drives to `/media/<label>-<device>`
 2. **Maestral** - Dropbox sync client installed in an isolated Python venv at `/opt/maestral-venv/`
 
+## Home NAS
+
+The home NAS is `gruissan.local` (`192.168.1.2`). Two SSH MCP servers reach it: `nas-ssh-fix` (user `fix`, data-sync and other NAS user services such as Maestral/Dropbox) and `nas-ssh-admin` (user `admin`, NAS administration). Register them on a new machine with the `home-setup` skill.
+
 ## Key Files
 
 - `usb-automount.sh` - Core mount/unmount handler, invoked by udev with `add|remove <device>` args
