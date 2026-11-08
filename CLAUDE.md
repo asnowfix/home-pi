@@ -81,3 +81,9 @@ When adding a new component to the meta-package:
 ## Versioning
 
 Semantic versioning with `v` prefix: `v1.2.3`. Tags must match `v[0-9]+.[0-9]+.[0-9]+`.
+
+## Home network
+
+Home devices (the NAS, the home display) and their SSH MCP servers are described in the owner's private
+notes, `~/.claude/home-network/devices.md` on the owner's machines. This repository is public: never write
+device addresses or hostnames here.
